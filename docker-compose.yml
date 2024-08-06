@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgres:16.3-alpine3.20
+    container_name: postgres_container
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chaintx
+    ports:
+      - '5432:5432'
