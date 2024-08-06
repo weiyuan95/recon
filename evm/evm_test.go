@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestEvmTranfers(t *testing.T) {
+func TestEvmTransfers(t *testing.T) {
 	client, err := ethclient.Dial("https://eth-pokt.nodies.app")
 	assert.Nil(t, err)
 
