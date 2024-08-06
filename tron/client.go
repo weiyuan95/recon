@@ -12,7 +12,7 @@ type ThrottleClient struct {
 	client   http.Client
 }
 
-// NewThrottleClient throttle time in seconds
+// NewThrottleClient throttle time in ms
 func NewThrottleClient(throttle int) *ThrottleClient {
 	return &ThrottleClient{
 		throttle: throttle,
@@ -28,7 +28,7 @@ func (c *ThrottleClient) Get(url string) (*http.Response, error) {
 
 	resp, err := c.client.Get(url)
 
-	time.Sleep(time.Duration(c.throttle) * time.Second)
+	time.Sleep(time.Duration(c.throttle) * time.Millisecond)
 
 	return resp, err
 }

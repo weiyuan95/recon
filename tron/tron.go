@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"strconv"
-	"time"
 )
 
 type TransferItem struct {
@@ -23,13 +21,11 @@ type TransferResult struct {
 	Data  []TransferItem
 }
 
-func Transfers(tokenAddress string) ([]reporter.Transfer, error) {
+func TrxTransfers(tokenAddress string) ([]reporter.Transfer, error) {
 	// The limit has a cap of 50 which is not documented
 	resultLimit := 50
 	start := 0
-	client := http.Client{
-		Timeout: 1 * time.Second,
-	}
+	client := NewThrottleClient(500)
 
 	url := fmt.Sprintf(
 		"https://apilist.tronscanapi.com/api/trx/transfer?sort=-timestamp&count=true&limit=%d&start=%d&address=%s&filterTokenValue=0",
@@ -47,25 +43,29 @@ func Transfers(tokenAddress string) ([]reporter.Transfer, error) {
 	defer get.Body.Close()
 
 	var data TransferResult
-	unmarshalErr := json.Unmarshal(body, &data)
-	if unmarshalErr != nil {
-		fmt.Println(unmarshalErr)
+	if err := json.Unmarshal(body, &data); err != nil {
+		fmt.Println(err)
 		return []reporter.Transfer{}, errors.New("failed to unmarshal data")
 	}
 
 	var result []reporter.Transfer
 
 	for len(data.Data) > 0 {
-		time.Sleep(1000 * time.Millisecond)
-
 		for _, transfer := range data.Data {
+			transferType := "SEND"
+			if transfer.TransferToAddress == tokenAddress {
+				transferType = "RECEIVE"
+			}
+
+			// Use append since we have no way of knowing the exact number of rows,
+			// since the API returns the wrong amount of rows
 			result = append(result, reporter.Transfer{
 				Txid:         transfer.TransactionHash,
 				From:         transfer.TransferFromAddress,
 				To:           transfer.TransferToAddress,
 				Timestamp:    strconv.Itoa(transfer.Timestamp),
 				Amount:       strconv.Itoa(transfer.Amount),
-				TransferType: "native",
+				TransferType: transferType,
 			})
 
 		}
@@ -84,13 +84,15 @@ func Transfers(tokenAddress string) ([]reporter.Transfer, error) {
 		}
 
 		body, err = io.ReadAll(get.Body)
-		defer get.Body.Close()
+		// Do not defer since we are in a loop - close it immediately after reading
+		// this is because the code that is deferred will only run _after_ the loop completes
+		get.Body.Close()
 
-		unmarshalErr = json.Unmarshal(body, &data)
-		if unmarshalErr != nil {
-			fmt.Println(unmarshalErr)
+		if err := json.Unmarshal(body, &data); err != nil {
+			fmt.Println(err)
 			return []reporter.Transfer{}, errors.New("failed to unmarshal data")
 		}
+
 	}
 
 	return result, nil

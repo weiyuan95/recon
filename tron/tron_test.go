@@ -6,19 +6,7 @@ import (
 	"testing"
 )
 
-func TestTronTransfers(t *testing.T) {
-	transfers, err := Transfers("TQCXkbg7JqBzj6q88DGJw4uBx8Gj9RftZV")
-	if err != nil {
-		return
-	}
-
-	// 55 as of 5th Aug, subject to change
-	if len(transfers) != 55 {
-		t.Fatal("Expected 55 transfers")
-	}
-}
-
-func TestGoRoutineTransfers(t *testing.T) {
+func TestTransfers(t *testing.T) {
 	transferStore := store.NewTransferStore()
 
 	var wg sync.WaitGroup
@@ -28,9 +16,10 @@ func TestGoRoutineTransfers(t *testing.T) {
 
 		go func() {
 			defer wg.Done()
-			transfers, err := Transfers(add)
+			transfers, err := TrxTransfers(add)
 			if err != nil {
-				t.Fatal("Failed to fetch transfers for TQCXkbg7JqBzj6q88DGJw4uBx8Gj9RftZV")
+				t.Error("Failed to fetch transfers for TQCXkbg7JqBzj6q88DGJw4uBx8Gj9RftZV")
+				return
 			}
 
 			for _, transfer := range transfers {
@@ -41,7 +30,7 @@ func TestGoRoutineTransfers(t *testing.T) {
 
 	wg.Wait()
 	// 113 as of 5th Aug, subject to change
-	if transferStore.Length() != 113 {
-		t.Fatal("Expected 113 transfers")
+	if transferStore.Length() < 113 {
+		t.Fatal("Expected at least 113 transfers")
 	}
 }

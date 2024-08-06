@@ -1,19 +1,20 @@
 package tron
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestThrottleClient(t *testing.T) {
-	throttleClient := NewThrottleClient(1)
+	throttleTime := 500
+	throttleClient := NewThrottleClient(throttleTime)
 	var wg sync.WaitGroup
 
 	then := time.Now()
+	numRuns := 3
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < numRuns; i++ {
 		wg.Add(1)
 
 		go func() {
@@ -26,9 +27,9 @@ func TestThrottleClient(t *testing.T) {
 	wg.Wait()
 
 	diff := time.Now().Sub(then)
-	fmt.Println("diff ->", diff.Seconds())
+	expectedDifference := int64(throttleTime * numRuns)
 
-	if diff.Seconds() < 5 {
-		t.Fatal("Expected 5 requests to take at least 10 seconds")
+	if diff.Milliseconds() < expectedDifference {
+		t.Fatal("Expected 3 requests to take at least 1.5 seconds")
 	}
 }
