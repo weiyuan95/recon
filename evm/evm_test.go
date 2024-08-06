@@ -3,15 +3,15 @@ package evm
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 )
 
 func TestEvmTranfers(t *testing.T) {
 	client, err := ethclient.Dial("https://eth-pokt.nodies.app")
-	if err != nil {
+	assert.Nil(t, err)
 
-	}
 	transfers := EvmTransfers(
 		client,
 		"0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
@@ -30,7 +30,5 @@ func TestEvmTranfers(t *testing.T) {
 		transferType: "SEND",
 	}
 
-	if transfers[0] != transfer {
-		t.Fatal("incorrect")
-	}
+	assert.Equal(t, transfers[0], transfer)
 }
