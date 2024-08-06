@@ -2,6 +2,7 @@ package evm
 
 import (
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -13,50 +14,91 @@ import (
 	"time"
 )
 
-func getErc20Abi() abi.ABI {
-	contractAbi, err := abi.JSON(strings.NewReader(string(Erc20MetaData.ABI)))
-	if err != nil {
-		log.Fatal(err)
-	}
-	return contractAbi
-}
-
+// ChaseEvmTransfers
+// TODO: Move out SlidingWindow logic
 func ChaseEvmTransfers(
 	client *ethclient.Client,
-	fromBlock *big.Int,
-	toBlock *big.Int,
-	interval int,
+	address string,
+	fromBlock uint64,
+	maxBlocks uint64,
+	transfers chan Transfer,
 ) {
+	defer close(transfers)
+
+	endBlock, err := client.BlockNumber(context.Background())
+	if err != nil {
+		log.Println("Error encountered fetching block number:", err)
+		return
+	}
+
+	toBlock := fromBlock + min(endBlock-fromBlock, maxBlocks)
 
 	for {
-		// fromBlock >= toBlock
-		if fromBlock.Cmp(toBlock) >= 0 {
-			log.Println("Waiting for new blocks...")
-			time.Sleep(1 * time.Second)
 
-			blockNumber, err := client.BlockNumber(context.Background())
+		// We've reached the tip of the chain. Sleep until another block is produced.
+		if fromBlock >= endBlock {
+			log.Println("Reached tip of chain. Sleeping.")
+			time.Sleep(14 * time.Second)
+
+			newTipHeight, err := client.BlockNumber(context.Background())
 			if err != nil {
+				// Might be an intermittent network issue - try again next iter
+				log.Println("Error encountered fetching block number:", err)
+				continue
 			}
 
-			// What if blockNumber is 2^64?!
-			// Well, then the chain has another problem on their hands lmao xD
-			toBlock.Set(big.NewInt(int64(blockNumber)))
-
-			// TODO: blockInterval = min(BigInt(endBlock - fromBlock), 100000n);
+			if newTipHeight >= endBlock {
+				log.Println("New block found. End block moving from", endBlock, "to", newTipHeight)
+				endBlock = newTipHeight
+			}
 
 			continue
 		}
 
-		// TODO: Implement chasing
+		// Chase the chain
+		for fromBlock <= endBlock {
+			for _, transfer := range EvmTransfers(
+				client,
+				address,
+				fromBlock,
+				toBlock,
+			) {
+				log.Println("Pushing transfer to channel")
+				transfers <- transfer
+			}
+
+			// Throttle
+			time.Sleep(1 * time.Second)
+
+			// Check if we have a new tip
+			newTipHeight, err := client.BlockNumber(context.Background())
+			if err != nil {
+				// We won't break here, since it could be an intermittent network issue.
+				// We'll just leave toBlock as-is.
+				fmt.Println("Error encountered fetching block number:", err)
+			} else {
+				endBlock = newTipHeight
+			}
+
+			// Move the window forward, limited by `maxBlocks` to reduce load on the node provider
+			// E.g.:
+			//   endBlock  = 100
+			//   fromBlock = 50 --- we're 50 blocks away from the chain tip
+			//   maxBlocks = 10 --- we only move the window 10 blocks forward, instead of 50
+			fromBlock = toBlock + 1
+			toBlock = fromBlock + min(endBlock-fromBlock, maxBlocks)
+		}
 	}
 }
 
 func EvmTransfers(
 	client *ethclient.Client,
 	address string,
-	fromBlock *big.Int,
-	toBlock *big.Int,
+	fromBlock uint64,
+	toBlock uint64,
 ) []Transfer {
+	//log.Println("\tLooking from", fromBlock, "to", toBlock)
+
 	var transfers []Transfer
 
 	logTransferSig := []byte("Transfer(address,address,uint256)")
@@ -64,8 +106,8 @@ func EvmTransfers(
 	fromAddressHash := common.HexToHash(address)
 
 	filter := ethereum.FilterQuery{
-		FromBlock: fromBlock,
-		ToBlock:   toBlock,
+		FromBlock: big.NewInt(int64(fromBlock)),
+		ToBlock:   big.NewInt(int64(toBlock)),
 		Topics: [][]common.Hash{
 			{logTransferSigHash},
 			{fromAddressHash},
@@ -114,6 +156,14 @@ func EvmTransfers(
 	}
 
 	return transfers
+}
+
+func getErc20Abi() abi.ABI {
+	contractAbi, err := abi.JSON(strings.NewReader(Erc20MetaData.ABI))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return contractAbi
 }
 
 func getTransferType(address string, from string) string {

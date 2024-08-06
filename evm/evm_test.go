@@ -3,9 +3,23 @@ package evm
 import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
-	"math/big"
 	"testing"
 )
+
+func TestChaseEvmTransfers(t *testing.T) {
+	client, err := ethclient.Dial("https://eth-pokt.nodies.app")
+	assert.Nil(t, err)
+
+	transfers := make(chan Transfer)
+
+	go ChaseEvmTransfers(
+		client,
+		"0x62a7b6eb6a5d2dcaa05bf53c7272afd9da460a2c",
+		20467174,
+		10,
+		transfers,
+	)
+}
 
 func TestEvmTransfers(t *testing.T) {
 	client, err := ethclient.Dial("https://eth-pokt.nodies.app")
@@ -14,8 +28,8 @@ func TestEvmTransfers(t *testing.T) {
 	transfers := EvmTransfers(
 		client,
 		"0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
-		big.NewInt(20359096),
-		big.NewInt(20359098),
+		20359096,
+		20359098,
 	)
 
 	assert.Equal(t, Transfer{
