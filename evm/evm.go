@@ -11,9 +11,18 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
 	"math/big"
+	"math/rand"
 	"strings"
 	"time"
 )
+
+func sleepWithJitter(seconds int, reason string) {
+	log.Println("Sleeping", seconds, "seconds -", reason)
+
+	jitter := 1 + rand.Intn(3)
+	duration := time.Duration(seconds + jitter)
+	time.Sleep(duration * time.Second)
+}
 
 // ChaseEvmTransfers
 // TODO: Move out SlidingWindow logic
@@ -38,8 +47,7 @@ func ChaseEvmTransfers(
 
 		// We've reached the tip of the chain. Sleep until another block is produced.
 		if fromBlock >= endBlock {
-			log.Println("Reached tip of chain. Sleeping.")
-			time.Sleep(14 * time.Second)
+			sleepWithJitter(14, "Reached tip of chain.")
 
 			newTipHeight, err := client.BlockNumber(context.Background())
 			if err != nil {
@@ -69,7 +77,7 @@ func ChaseEvmTransfers(
 			}
 
 			// Throttle
-			time.Sleep(1 * time.Second)
+			sleepWithJitter(1, "Throttling")
 
 			// Check if we have a new tip
 			newTipHeight, err := client.BlockNumber(context.Background())
