@@ -1,7 +1,6 @@
 package evm
 
 import (
-	"fmt"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
 	"math/big"
@@ -18,8 +17,6 @@ func TestEvmTranfers(t *testing.T) {
 		big.NewInt(20359096),
 		big.NewInt(20359098),
 	)
-
-	fmt.Println(transfers[0].from)
 
 	transfer := Transfer{
 		from:         "0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
