@@ -6,32 +6,40 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 	"strconv"
 )
 
-type TransferItem struct {
+type TrxTransferItem struct {
 	TransactionHash, TransferFromAddress, TransferToAddress string
 	Confirmed                                               bool
 	Amount                                                  int // In SUN
 	Timestamp                                               int
 }
 
-type TransferResult struct {
+type TrxTransferResult struct {
 	Total int
-	Data  []TransferItem
+	Data  []TrxTransferItem
 }
 
-func TrxTransfers(tokenAddress string) ([]reporter.Transfer, error) {
+func TrxTransfers(walletAddress string, isShasta bool) ([]reporter.Transfer, error) {
 	// The limit has a cap of 50 which is not documented
 	resultLimit := 50
 	start := 0
 	client := NewThrottleClient(500)
+	baseUrl := "https://apilist.tronscanapi.com"
+
+	if isShasta {
+		baseUrl = "https://shastapi.tronscan.org"
+	}
 
 	url := fmt.Sprintf(
-		"https://apilist.tronscanapi.com/api/trx/transfer?sort=-timestamp&count=true&limit=%d&start=%d&address=%s&filterTokenValue=0",
+		"%s/api/trx/transfer?sort=-timestamp&count=true&limit=%d&start=%d&address=%s&filterTokenValue=0",
+		baseUrl,
 		resultLimit,
 		start,
-		tokenAddress,
+		walletAddress,
 	)
 
 	get, err := client.Get(url)
@@ -42,7 +50,7 @@ func TrxTransfers(tokenAddress string) ([]reporter.Transfer, error) {
 	body, err := io.ReadAll(get.Body)
 	defer get.Body.Close()
 
-	var data TransferResult
+	var data TrxTransferResult
 	if err := json.Unmarshal(body, &data); err != nil {
 		fmt.Println(err)
 		return []reporter.Transfer{}, errors.New("failed to unmarshal data")
@@ -53,8 +61,13 @@ func TrxTransfers(tokenAddress string) ([]reporter.Transfer, error) {
 	for len(data.Data) > 0 {
 		for _, transfer := range data.Data {
 			transferType := "SEND"
-			if transfer.TransferToAddress == tokenAddress {
+			if transfer.TransferToAddress == walletAddress {
 				transferType = "RECEIVE"
+			}
+			canonicalAmount, err := toCanonical(strconv.Itoa(transfer.Amount), 6)
+
+			if err != nil {
+				return []reporter.Transfer{}, errors.New("failed to convert amount")
 			}
 
 			// Use append since we have no way of knowing the exact number of rows,
@@ -64,8 +77,9 @@ func TrxTransfers(tokenAddress string) ([]reporter.Transfer, error) {
 				From:         transfer.TransferFromAddress,
 				To:           transfer.TransferToAddress,
 				Timestamp:    strconv.Itoa(transfer.Timestamp),
-				Amount:       strconv.Itoa(transfer.Amount),
+				Amount:       canonicalAmount,
 				TransferType: transferType,
+				TokenType:    "TRX",
 			})
 
 		}
@@ -75,7 +89,7 @@ func TrxTransfers(tokenAddress string) ([]reporter.Transfer, error) {
 			"https://apilist.tronscanapi.com/api/trx/transfer?sort=-timestamp&count=true&limit=%d&start=%d&address=%s&filterTokenValue=0",
 			resultLimit,
 			start,
-			tokenAddress,
+			walletAddress,
 		)
 
 		get, err = client.Get(url)
@@ -96,4 +110,130 @@ func TrxTransfers(tokenAddress string) ([]reporter.Transfer, error) {
 	}
 
 	return result, nil
+}
+
+type Trc20TokenInfo struct {
+	TokenAbbr    string
+	TokenDecimal int
+}
+
+type Trc20TransferItem struct {
+	TransactionId  string `json:"transaction_id"`
+	BlockTimestamp int    `json:"block_ts"`
+	From           string `json:"from_address"`
+	To             string `json:"to_address"`
+	Block          int
+	Amount         string `json:"quant"`
+	Confirmed      bool
+	TokenInfo      Trc20TokenInfo
+}
+
+type Trc20TransferResult struct {
+	TokenTransfers []Trc20TransferItem `json:"token_transfers"`
+}
+
+func Trc20Transfers(walletAddress string, isShasta bool) ([]reporter.Transfer, error) {
+	// The limit has a cap of 50 which is not documented
+	resultLimit := 50
+	start := 0
+	client := NewThrottleClient(500)
+	baseUrl := "https://apilist.tronscanapi.com"
+
+	if isShasta {
+		baseUrl = "https://shastapi.tronscan.org"
+	}
+
+	// TODO: improve this way of getting the contract address
+	// mainnet
+	usdtContractAddress := "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+	if isShasta {
+		usdtContractAddress = "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs"
+	}
+
+	url := fmt.Sprintf(
+		"%s/api/filter/trc20/transfers?sort=-timestamp&limit=%d&start=%d&trc20Id=%s&relatedAddress=%s&filterTokenValue=0",
+		baseUrl,
+		resultLimit,
+		start,
+		usdtContractAddress,
+		walletAddress,
+	)
+
+	get, err := client.Get(url)
+	if err != nil {
+		return []reporter.Transfer{}, errors.New("failed to fetch data")
+	}
+
+	body, err := io.ReadAll(get.Body)
+	defer get.Body.Close()
+
+	var result []reporter.Transfer
+
+	var data Trc20TransferResult
+	if err := json.Unmarshal(body, &data); err != nil {
+		fmt.Println(err)
+		return []reporter.Transfer{}, errors.New("failed to unmarshal data")
+	}
+
+	for len(data.TokenTransfers) > 0 {
+		for _, transfer := range data.TokenTransfers {
+			transferType := "SEND"
+			if transfer.To == walletAddress {
+				transferType = "RECEIVE"
+			}
+
+			canonicalAmount, err := toCanonical(transfer.Amount, 6)
+
+			if err != nil {
+				return []reporter.Transfer{}, errors.New("failed to convert amount")
+			}
+
+			// Use append since we have no way of knowing the exact number of rows,
+			// since the API returns the wrong amount of rows
+			result = append(result, reporter.Transfer{
+				Txid:         transfer.TransactionId,
+				From:         transfer.From,
+				To:           transfer.To,
+				Timestamp:    strconv.Itoa(transfer.BlockTimestamp),
+				Amount:       canonicalAmount,
+				TransferType: transferType,
+				TokenType:    transfer.TokenInfo.TokenAbbr,
+			})
+
+		}
+
+		start += len(data.TokenTransfers)
+		url := fmt.Sprintf(
+			"%s/api/filter/trc20/transfers?sort=-timestamp&limit=%d&start=%d&trc20Id=%s&relatedAddress=%s&filterTokenValue=0",
+			baseUrl,
+			resultLimit,
+			start,
+			usdtContractAddress,
+			walletAddress,
+		)
+
+		get, err = client.Get(url)
+		if err != nil {
+			return []reporter.Transfer{}, errors.New("failed to fetch data")
+		}
+
+		body, err = io.ReadAll(get.Body)
+		// Do not defer since we are in a loop - close it immediately after reading
+		// this is because the code that is deferred will only run _after_ the loop completes
+		get.Body.Close()
+
+		if err := json.Unmarshal(body, &data); err != nil {
+			fmt.Println(err)
+			return []reporter.Transfer{}, errors.New("failed to unmarshal data")
+		}
+
+	}
+
+	return result, nil
+}
+
+func toCanonical(amount string, decimals int) (string, error) {
+	bigFloat, _, _ := new(big.Float).Parse(amount, 10)
+	final := bigFloat.Mul(bigFloat, big.NewFloat(math.Pow(10, float64(-decimals))))
+	return final.Text('f', decimals), nil
 }

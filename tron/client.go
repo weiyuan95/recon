@@ -12,7 +12,10 @@ type ThrottleClient struct {
 	client   http.Client
 }
 
-// NewThrottleClient throttle time in ms
+// NewThrottleClient A thin wrapper around the net/http client
+// which throttles requests by a given amount of milliseconds. This process
+// is thread safe and only allows one request to be made at any given time.
+// This is necessary since the TronGrid API has a rate limit of 5 requests per second.
 func NewThrottleClient(throttle int) *ThrottleClient {
 	return &ThrottleClient{
 		throttle: throttle,
