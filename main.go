@@ -1,9 +1,9 @@
 package main
 
 import (
+	"chaintx/chains"
 	"chaintx/evm"
 	"chaintx/reporter"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -33,9 +33,9 @@ func main() {
 	//   - HTTP 400 { status: 'error', reason: 'Bad input.' }
 	//   - HTTP 500 { status: 'error', reason: 'Maximum address limit reached.' }
 	type Account struct {
-		Chain     string `json:"chain"`
-		Address   string `json:"address"`
-		FromBlock uint64 `json:"fromBlock"`
+		Chain     chains.ChainName `json:"chain"`
+		Address   string           `json:"address"`
+		FromBlock uint64           `json:"fromBlock"`
 	}
 	type WatchRequest struct {
 		Accounts []Account `json:"accounts"`
@@ -53,18 +53,29 @@ func main() {
 			})
 		}
 
+		// Validate input first
+		for _, account := range request.Accounts {
+			if !chains.IsValidChain(account.Chain) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"status": "error",
+					"reason": "Invalid chain.",
+				})
+				return
+			}
+		}
+
 		// Fire off goroutines to watch accounts
 		for _, account := range request.Accounts {
 			log.Println("Watching", account.Chain, account.Address)
 
 			// Set up client
-			// TODO:
-			//   Get client from a pool
-			//   Use a different client for each chain
-			client, err := ethclient.Dial("https://eth-pokt.nodies.app")
+			client, err := evm.GetClient(account.Chain)
 			if err != nil {
-				log.Println("Error encountered dialing client:", err)
-				return
+				// Since we validated the chain earlier, this should never happen. But let's just be defensive here.
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"status": "error",
+					"reason": err.Error(),
+				})
 			}
 
 			// Set up channel
