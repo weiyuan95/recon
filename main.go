@@ -4,19 +4,17 @@ import (
 	"chaintx/chains"
 	"chaintx/evm"
 	"chaintx/reporter"
+	"chaintx/store"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
+	"strings"
 )
-
-// REST API
-// - GET /transfers?addresses=a,b,c&as=json/csv
-//   - 200 { status: 'processing' }
-//   - 200 { status: 'done', transfers: [...], next: 'cursor' }
-//   - 404 { status: 'error', reason: 'Not a registered address.' }
 
 func main() {
 	r := gin.Default()
+	localStore := store.NewTransferStore()
 
 	// POST /watch
 	// Example request:
@@ -62,6 +60,8 @@ func main() {
 				})
 				return
 			}
+
+			// TODO: if already watching the chain-address, return 200
 		}
 
 		// Fire off goroutines to watch accounts
@@ -88,8 +88,7 @@ func main() {
 			// Fire off goroutine to process transfers
 			go func() {
 				for transfer := range transfers {
-					// TODO: Store transfer in database
-					log.Println("Transfer found:", transfer.Txid, " of ", transfer.Amount)
+					localStore.Add(account.Address, transfer)
 				}
 			}()
 		}
@@ -97,6 +96,42 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "processing",
 		})
+	})
+
+	// - GET /transfers?addresses=a,b,c&as=json/csv
+	//   - 200 { status: 'processing' }
+	//   - 200 { status: 'done', transfers: [...], next: 'cursor' }
+	//   - 404 { status: 'error', reason: 'Not a registered address.' }
+	// TODO: Handle `as`
+	r.GET("/transfers", func(c *gin.Context) {
+
+		addresses := c.Query("addresses")
+		if addresses == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status": "error",
+				"reason": "No addresses provided.",
+			})
+			return
+		}
+
+		// Validate address list
+		addressesList := strings.Split(addresses, ",")
+		for _, address := range addressesList {
+			if !common.IsHexAddress(address) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"status": "error",
+					"reason": "Invalid address provided: " + address,
+				})
+				return
+			}
+		}
+
+		// Concatenate all transfers and return
+		allTransfers := make([]reporter.Transfer, 0)
+		for _, address := range addressesList {
+			allTransfers = append(allTransfers, localStore.ListByAddress(address)...)
+		}
+		c.JSON(http.StatusOK, allTransfers)
 	})
 
 	// Health

@@ -12,19 +12,19 @@ func TestTrxTransfers(t *testing.T) {
 	transferStore := store.NewTransferStore()
 
 	var wg sync.WaitGroup
-	for _, add := range [2]string{"TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd", "TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd"} {
+	for _, address := range [2]string{"TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd", "TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd"} {
 		wg.Add(1)
 
 		go func() {
 			defer wg.Done()
-			transfers, err := TrxTransfers(add, true)
+			transfers, err := TrxTransfers(address, true)
 			if err != nil {
 				t.Error("Failed to fetch TRX transfers for TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd")
 				return
 			}
 
 			for _, transfer := range transfers {
-				transferStore.Add(transfer.Txid, transfer)
+				transferStore.Add(address, transfer)
 			}
 		}()
 	}
@@ -49,19 +49,19 @@ func TestTrc20Transfers(t *testing.T) {
 	transferStore := store.NewTransferStore()
 
 	var wg sync.WaitGroup
-	for _, add := range [2]string{"TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd", "TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd"} {
+	for _, address := range [2]string{"TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd", "TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd"} {
 		wg.Add(1)
 
 		go func() {
 			defer wg.Done()
-			transfers, err := Trc20Transfers(add, true)
+			transfers, err := Trc20Transfers(address, true)
 			if err != nil {
 				t.Error("Failed to fetch USDT transfers for TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd")
 				return
 			}
 
 			for _, transfer := range transfers {
-				transferStore.Add(transfer.Txid, transfer)
+				transferStore.Add(address, transfer)
 			}
 		}()
 	}

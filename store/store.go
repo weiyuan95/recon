@@ -6,31 +6,36 @@ import (
 )
 
 type TransferStore struct {
-	mu   sync.Mutex
-	data map[string]reporter.Transfer
+	mu                 sync.Mutex
+	transfersByTxid    map[string]reporter.Transfer
+	transfersByAddress map[string][]reporter.Transfer
 }
 
 func NewTransferStore() *TransferStore {
 	return &TransferStore{
-		data: make(map[string]reporter.Transfer),
+		transfersByTxid:    make(map[string]reporter.Transfer),
+		transfersByAddress: make(map[string][]reporter.Transfer),
 	}
 }
 
-func (s *TransferStore) Add(txid string, transfer reporter.Transfer) {
+func (s *TransferStore) Add(address string, transfer reporter.Transfer) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.data[txid] = transfer
+	s.transfersByTxid[transfer.Txid] = transfer
+	s.transfersByAddress[address] = append(s.transfersByAddress[address], transfer)
 }
 
 func (s *TransferStore) Get(txid string) (reporter.Transfer, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	transfer, ok := s.data[txid]
+	transfer, ok := s.transfersByTxid[txid]
 	return transfer, ok
 }
 
-func (s *TransferStore) Length() int {
-	return len(s.data)
+func (s *TransferStore) ListByAddress(address string) []reporter.Transfer {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.transfersByAddress[address]
 }
