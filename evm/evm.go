@@ -17,7 +17,7 @@ import (
 )
 
 func sleepWithJitter(seconds int, reason string) {
-	log.Println("Sleeping", seconds, "seconds -", reason)
+	//log.Println("Sleeping", seconds, "seconds -", reason)
 
 	jitter := 1 + rand.Intn(3)
 	duration := time.Duration(seconds + jitter)
@@ -31,9 +31,9 @@ func ChaseTransfers(
 	address string,
 	fromBlock uint64,
 	maxBlocks uint64,
-	transfers chan reporter.Transfer,
+	transfersChan chan reporter.Transfer,
 ) {
-	defer close(transfers)
+	defer close(transfersChan)
 
 	endBlock, err := client.BlockNumber(context.Background())
 	if err != nil {
@@ -47,7 +47,7 @@ func ChaseTransfers(
 
 		// We've reached the tip of the chain. Sleep until another block is produced.
 		if fromBlock >= endBlock {
-			sleepWithJitter(14, "Reached tip of chain.")
+			sleepWithJitter(1, "Reached tip of chain.")
 
 			newTipHeight, err := client.BlockNumber(context.Background())
 			if err != nil {
@@ -57,23 +57,26 @@ func ChaseTransfers(
 			}
 
 			if newTipHeight >= endBlock {
-				log.Println("New block found. End block moving from", endBlock, "to", newTipHeight)
 				endBlock = newTipHeight
+				toBlock = endBlock
 			}
 
 			continue
 		}
 
 		// Chase the chain
-		for fromBlock <= endBlock {
-			for _, transfer := range Transfers(
+		for toBlock <= endBlock {
+			transfers := Transfers(
 				client,
 				address,
 				fromBlock,
 				toBlock,
-			) {
-				log.Println("Pushing transfer to channel")
-				transfers <- transfer
+			)
+
+			log.Println("Block", fromBlock, "to", toBlock, ":", len(transfers), "transfers")
+
+			for _, transfer := range transfers {
+				transfersChan <- transfer
 			}
 
 			// Throttle
