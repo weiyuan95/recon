@@ -1,6 +1,7 @@
 package evm
 
 import (
+	"chaintx/reporter"
 	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
@@ -21,7 +22,7 @@ func ChaseEvmTransfers(
 	address string,
 	fromBlock uint64,
 	maxBlocks uint64,
-	transfers chan Transfer,
+	transfers chan reporter.Transfer,
 ) {
 	defer close(transfers)
 
@@ -96,10 +97,10 @@ func EvmTransfers(
 	address string,
 	fromBlock uint64,
 	toBlock uint64,
-) []Transfer {
+) []reporter.Transfer {
 	//log.Println("\tLooking from", fromBlock, "to", toBlock)
 
-	var transfers []Transfer
+	var transfers []reporter.Transfer
 
 	logTransferSig := []byte("Transfer(address,address,uint256)")
 	logTransferSigHash := crypto.Keccak256Hash(logTransferSig)
@@ -142,13 +143,13 @@ func EvmTransfers(
 			transferEvent.From = common.HexToAddress(vLog.Topics[1].Hex())
 			transferEvent.To = common.HexToAddress(vLog.Topics[2].Hex())
 
-			transfer := Transfer{
-				txid:         vLog.TxHash.Hex(),
-				timestamp:    vLog.BlockHash.Hex(),
-				transferType: getTransferType(address, transferEvent.From.Hex()),
-				from:         transferEvent.From.Hex(),
-				to:           transferEvent.To.Hex(),
-				amount:       transferEvent.Value.Text(10), // TODO: Format to canonical amount
+			transfer := reporter.Transfer{
+				Txid:         vLog.TxHash.Hex(),
+				Timestamp:    vLog.BlockHash.Hex(),
+				TransferType: getTransferType(address, transferEvent.From.Hex()),
+				From:         transferEvent.From.Hex(),
+				To:           transferEvent.To.Hex(),
+				Amount:       transferEvent.Value.Text(10), // TODO: Format to canonical amount
 			}
 
 			transfers = append(transfers, transfer)
@@ -172,22 +173,3 @@ func getTransferType(address string, from string) string {
 	}
 	return "RECEIVE"
 }
-
-// 8===========D----
-
-// TODO: DRY this shit away
-type Transfer struct {
-	txid         string
-	timestamp    string
-	transferType string
-	from         string
-	to           string
-	amount       string
-}
-
-//// Erc20Transfer The struct returned from the eth node's `getLogs` rpc call
-//type Erc20Transfer struct {
-//	From   common.Address
-//	To     common.Address
-//	Tokens *big.Int
-//}
