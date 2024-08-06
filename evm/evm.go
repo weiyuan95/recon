@@ -24,9 +24,9 @@ func sleepWithJitter(seconds int, reason string) {
 	time.Sleep(duration * time.Second)
 }
 
-// ChaseEvmTransfers
+// ChaseTransfers
 // TODO: Move out SlidingWindow logic
-func ChaseEvmTransfers(
+func ChaseTransfers(
 	client *ethclient.Client,
 	address string,
 	fromBlock uint64,
@@ -66,7 +66,7 @@ func ChaseEvmTransfers(
 
 		// Chase the chain
 		for fromBlock <= endBlock {
-			for _, transfer := range EvmTransfers(
+			for _, transfer := range Transfers(
 				client,
 				address,
 				fromBlock,
@@ -100,7 +100,7 @@ func ChaseEvmTransfers(
 	}
 }
 
-func EvmTransfers(
+func Transfers(
 	client *ethclient.Client,
 	address string,
 	fromBlock uint64,

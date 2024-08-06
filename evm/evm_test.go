@@ -13,7 +13,7 @@ func TestChaseEvmTransfers(t *testing.T) {
 
 	transfers := make(chan reporter.Transfer)
 
-	go ChaseEvmTransfers(
+	go ChaseTransfers(
 		client,
 		"0x62a7b6eb6a5d2dcaa05bf53c7272afd9da460a2c",
 		20467174,
@@ -26,7 +26,7 @@ func TestEvmTransfers(t *testing.T) {
 	client, err := ethclient.Dial("https://eth-pokt.nodies.app")
 	assert.Nil(t, err)
 
-	transfers := EvmTransfers(
+	transfers := Transfers(
 		client,
 		"0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
 		20359096,
