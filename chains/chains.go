@@ -18,3 +18,21 @@ func IsValidChain(chain ChainName) bool {
 		return false
 	}
 }
+
+func IsEVM(name ChainName) bool {
+	switch name {
+	case Ethereum, EthereumSepolia, Polygon:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsTvm(name ChainName) bool {
+	switch name {
+	case Tron, TronShasta:
+		return true
+	default:
+		return false
+	}
+}

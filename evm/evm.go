@@ -1,7 +1,9 @@
 package evm
 
 import (
+	"chaintx/chains"
 	"chaintx/reporter"
+	"chaintx/store"
 	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
@@ -168,6 +170,31 @@ func Transfers(
 	}
 
 	return transfers
+}
+
+func Watch(address string, chainName chains.ChainName, fromBlock uint64) error {
+	// Set up client
+	client, err := GetClient(chainName)
+	if err != nil {
+		return err
+	}
+
+	// Set up channel
+	transfers := make(chan reporter.Transfer)
+
+	// Fire off goroutine to chase transfers
+	// TODO: maxBlocks should be chain specific, an internal impl detail of ChaseTransfers
+	go ChaseTransfers(client, address, fromBlock, 100000, transfers)
+
+	// Fire off goroutine to process transfers
+	go func() {
+		for transfer := range transfers {
+			store.LocalStore.Add(address, transfer)
+		}
+	}()
+
+	// No errors with watching addresses
+	return nil
 }
 
 func getErc20Abi() abi.ABI {

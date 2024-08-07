@@ -5,6 +5,7 @@ import (
 	"chaintx/evm"
 	"chaintx/reporter"
 	"chaintx/store"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -14,7 +15,6 @@ import (
 
 func main() {
 	r := gin.Default()
-	localStore := store.NewTransferStore()
 
 	// POST /watch
 	// Example request:
@@ -35,9 +35,11 @@ func main() {
 		Address   string           `json:"address"`
 		FromBlock uint64           `json:"fromBlock"`
 	}
+
 	type WatchRequest struct {
 		Accounts []Account `json:"accounts"`
 	}
+
 	r.POST("/watch", func(c *gin.Context) {
 
 		// Bind request body to struct
@@ -56,7 +58,7 @@ func main() {
 			if !chains.IsValidChain(account.Chain) {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"status": "error",
-					"reason": "Invalid chain.",
+					"reason": fmt.Sprintf("Invalid chain: %s", account.Chain),
 				})
 				return
 			}
@@ -68,29 +70,29 @@ func main() {
 		for _, account := range request.Accounts {
 			log.Println("Watching", account.Chain, account.Address)
 
-			// Set up client
-			client, err := evm.GetClient(account.Chain)
-			if err != nil {
-				// Since we validated the chain earlier, this should never happen. But let's just be defensive here.
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"status": "error",
-					"reason": err.Error(),
-				})
-			}
-
-			// Set up channel
-			transfers := make(chan reporter.Transfer)
-
-			// Fire off goroutine to chase transfers
-			// TODO: maxBlocks should be chain specific, an internal impl detail of ChaseTransfers
-			go evm.ChaseTransfers(client, account.Address, account.FromBlock, 100000, transfers)
-
-			// Fire off goroutine to process transfers
-			go func() {
-				for transfer := range transfers {
-					localStore.Add(account.Address, transfer)
+			if chains.IsEVM(account.Chain) {
+				if err := evm.Watch(account.Address, account.Chain, account.FromBlock); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"status": "error",
+						"reason": err.Error(),
+					})
+					return
 				}
-			}()
+			} else if chains.IsTvm(account.Chain) {
+				// TODO: If TVM, run TVM watch code
+				c.JSON(http.StatusBadRequest, gin.H{
+					"status": "error",
+					"reason": "Watching Tron addresses is not implemented.",
+				})
+				return
+			} else {
+				// Not a valid chain, shouldn't hit this case since we already validate upfront
+				c.JSON(http.StatusBadRequest, gin.H{
+					"status": "error",
+					"reason": fmt.Sprintf("Invalid chain: %s", account.Chain),
+				})
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -129,7 +131,7 @@ func main() {
 		// Concatenate all transfers and return
 		allTransfers := make([]reporter.Transfer, 0)
 		for _, address := range addressesList {
-			allTransfers = append(allTransfers, localStore.ListByAddress(address)...)
+			allTransfers = append(allTransfers, store.LocalStore.ListByAddress(address)...)
 		}
 		c.JSON(http.StatusOK, allTransfers)
 	})

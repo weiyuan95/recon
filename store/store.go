@@ -45,3 +45,7 @@ func (s *InMemoryTransferStore) ListByAddress(address string) []reporter.Transfe
 	defer s.mu.Unlock()
 	return s.transfersByAddress[address]
 }
+
+// LocalStore For MVP, a global in-memory store is good enough, we can swap this out for a persistent store later
+// once the idea is validated
+var LocalStore TransferStore = NewTransferStore()
