@@ -9,3 +9,7 @@ type Transfer struct {
 	To           string
 	Amount       string
 }
+
+type WatchedAddressInfo struct {
+	Address string
+}

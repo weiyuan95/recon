@@ -189,7 +189,7 @@ func Watch(address string, chainName chains.ChainName, fromBlock uint64) error {
 	// Fire off goroutine to process transfers
 	go func() {
 		for transfer := range transfers {
-			store.LocalStore.Add(address, transfer)
+			store.LocalTransferStore.Add(address, transfer)
 		}
 	}()
 

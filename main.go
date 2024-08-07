@@ -5,8 +5,8 @@ import (
 	"chaintx/evm"
 	"chaintx/reporter"
 	"chaintx/store"
+	"chaintx/tron"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -15,6 +15,16 @@ import (
 
 func main() {
 	r := gin.Default()
+
+	// Kickoff the tron.Watch job when initialising the application
+	if err := tron.Watch(chains.TronShasta); err != nil {
+		log.Fatal("Failed to start tron.Watch for TronShasta:", err)
+		return
+	}
+	if err := tron.Watch(chains.Tron); err != nil {
+		log.Fatal("Failed to start tron.Watch for Tron:", err)
+		return
+	}
 
 	// POST /watch
 	// Example request:
@@ -79,12 +89,11 @@ func main() {
 					return
 				}
 			} else if chains.IsTvm(account.Chain) {
-				// TODO: If TVM, run TVM watch code
-				c.JSON(http.StatusBadRequest, gin.H{
-					"status": "error",
-					"reason": "Watching Tron addresses is not implemented.",
+				// Add the address to be watched into the store, it will be picked up by the
+				// tron.Watch scheduled job
+				store.LocalWatchedAddressStore.Add(account.Chain, reporter.WatchedAddressInfo{
+					Address: account.Address,
 				})
-				return
 			} else {
 				// Not a valid chain, shouldn't hit this case since we already validate upfront
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -117,21 +126,22 @@ func main() {
 		}
 
 		// Validate address list
-		addressesList := strings.Split(addresses, ",")
-		for _, address := range addressesList {
-			if !common.IsHexAddress(address) {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"status": "error",
-					"reason": "Invalid address provided: " + address,
-				})
-				return
-			}
-		}
+		// TODO: validate for Tron addresses as well, for now, do not validate
+		//addressesList := strings.Split(addresses, ",")
+		//for _, address := range addressesList {
+		//	if !common.IsHexAddress(address) {
+		//		c.JSON(http.StatusBadRequest, gin.H{
+		//			"status": "error",
+		//			"reason": "Invalid address provided: " + address,
+		//		})
+		//		return
+		//	}
+		//}
 
 		// Concatenate all transfers and return
 		allTransfers := make([]reporter.Transfer, 0)
-		for _, address := range addressesList {
-			allTransfers = append(allTransfers, store.LocalStore.ListByAddress(address)...)
+		for _, address := range strings.Split(addresses, ",") {
+			allTransfers = append(allTransfers, store.LocalTransferStore.ListByAddress(address)...)
 		}
 		c.JSON(http.StatusOK, allTransfers)
 	})

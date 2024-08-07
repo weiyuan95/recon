@@ -1,7 +1,10 @@
 package tron
 
 import (
+	"chaintx/chains"
 	"chaintx/reporter"
+	"chaintx/scheduler"
+	"chaintx/store"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,15 +26,20 @@ type TrxTransferResult struct {
 	Data  []TrxTransferItem
 }
 
-func TrxTransfers(walletAddress string, isShasta bool) ([]reporter.Transfer, error) {
+func TrxTransfers(walletAddress string, chainName chains.ChainName) ([]reporter.Transfer, error) {
 	// The limit has a cap of 50 which is not documented
 	resultLimit := 50
 	start := 0
 	client := NewThrottleClient(500)
-	baseUrl := "https://apilist.tronscanapi.com"
+	var baseUrl string
 
-	if isShasta {
+	// TODO: better way to handle this?
+	if chainName == chains.Tron {
+		baseUrl = "https://apilist.tronscanapi.com"
+	} else if chainName == chains.TronShasta {
 		baseUrl = "https://shastapi.tronscan.org"
+	} else {
+		return []reporter.Transfer{}, errors.New("invalid chain name")
 	}
 
 	url := fmt.Sprintf(
@@ -132,22 +140,24 @@ type Trc20TransferResult struct {
 	TokenTransfers []Trc20TransferItem `json:"token_transfers"`
 }
 
-func Trc20Transfers(walletAddress string, isShasta bool) ([]reporter.Transfer, error) {
+func Trc20Transfers(walletAddress string, chainName chains.ChainName) ([]reporter.Transfer, error) {
 	// The limit has a cap of 50 which is not documented
 	resultLimit := 50
 	start := 0
 	client := NewThrottleClient(500)
-	baseUrl := "https://apilist.tronscanapi.com"
 
-	if isShasta {
+	var baseUrl string
+	var usdtContractAddress string
+
+	// TODO: better way to handle this?
+	if chainName == chains.Tron {
+		baseUrl = "https://apilist.tronscanapi.com"
+		usdtContractAddress = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+	} else if chainName == chains.TronShasta {
 		baseUrl = "https://shastapi.tronscan.org"
-	}
-
-	// TODO: improve this way of getting the contract address
-	// mainnet
-	usdtContractAddress := "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
-	if isShasta {
 		usdtContractAddress = "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs"
+	} else {
+		return []reporter.Transfer{}, errors.New("invalid chain name")
 	}
 
 	url := fmt.Sprintf(
@@ -236,4 +246,39 @@ func toCanonical(amount string, decimals int) (string, error) {
 	bigFloat, _, _ := new(big.Float).Parse(amount, 10)
 	final := bigFloat.Mul(bigFloat, big.NewFloat(math.Pow(10, float64(-decimals))))
 	return final.Text('f', decimals), nil
+}
+
+func Watch(chainName chains.ChainName) error {
+	// Schedule a job to pull all the Tron addresses we are watching, then pull all the TRX and TRC20 data for
+	// those addresses
+	scheduler.Schedule(func() {
+		infos, present := store.LocalWatchedAddressStore.Get(chainName)
+		// TODO: Goroutine?
+		if present {
+			for _, info := range infos {
+				trxTransfers, err := TrxTransfers(info.Address, chainName)
+				if err != nil {
+					fmt.Println("Failed to fetch TRX trxTransfers for", info.Address)
+					return
+				}
+
+				trc20Transfers, err := Trc20Transfers(info.Address, chainName)
+				if err != nil {
+					fmt.Println("Failed to fetch TRC20 trxTransfers for", info.Address)
+					return
+				}
+
+				for _, transfer := range trxTransfers {
+					store.LocalTransferStore.Add(info.Address, transfer)
+				}
+
+				for _, transfer := range trc20Transfers {
+					store.LocalTransferStore.Add(info.Address, transfer)
+				}
+			}
+		}
+
+	}, 20_000) // Every 10 seconds TODO: change to a longer time for 'prod' use
+
+	return nil
 }

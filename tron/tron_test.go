@@ -17,7 +17,7 @@ func TestTrxTransfers(t *testing.T) {
 
 		go func() {
 			defer wg.Done()
-			transfers, err := TrxTransfers(address, true)
+			transfers, err := TrxTransfers(address, "tronShasta")
 			if err != nil {
 				t.Error("Failed to fetch TRX transfers for TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd")
 				return
@@ -54,7 +54,7 @@ func TestTrc20Transfers(t *testing.T) {
 
 		go func() {
 			defer wg.Done()
-			transfers, err := Trc20Transfers(address, true)
+			transfers, err := Trc20Transfers(address, "tronShasta")
 			if err != nil {
 				t.Error("Failed to fetch USDT transfers for TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd")
 				return
