@@ -5,6 +5,7 @@ go 1.22.5
 require (
 	github.com/ethereum/go-ethereum v1.14.7
 	github.com/gin-gonic/gin v1.10.0
+	github.com/lib/pq v1.10.9
 	github.com/stretchr/testify v1.9.0
 )
 
