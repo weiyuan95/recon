@@ -29,13 +29,19 @@ func sleepWithJitter(seconds int, reason string) {
 // ChaseTransfers
 // TODO: Move out SlidingWindow logic
 func ChaseTransfers(
-	client *ethclient.Client,
+	chain chains.ChainName,
 	address string,
 	fromBlock uint64,
 	maxBlocks uint64,
 	transfersChan chan reporter.Transfer,
 ) {
 	defer close(transfersChan)
+
+	client, err := GetClient(chain)
+	if err != nil {
+		log.Println("Error encountered fetching client:", err)
+		return
+	}
 
 	endBlock, err := client.BlockNumber(context.Background())
 	if err != nil {
@@ -68,8 +74,9 @@ func ChaseTransfers(
 
 		// Chase the chain
 		for toBlock <= endBlock {
-			transfers := Transfers(
+			transfers := transfers(
 				client,
+				chain,
 				address,
 				fromBlock,
 				toBlock,
@@ -105,8 +112,9 @@ func ChaseTransfers(
 	}
 }
 
-func Transfers(
+func transfers(
 	client *ethclient.Client,
+	chain chains.ChainName,
 	address string,
 	fromBlock uint64,
 	toBlock uint64,
@@ -157,6 +165,7 @@ func Transfers(
 			transferEvent.To = common.HexToAddress(vLog.Topics[2].Hex())
 
 			transfer := reporter.Transfer{
+				Chain:        chain,
 				Txid:         vLog.TxHash.Hex(),
 				Timestamp:    vLog.BlockHash.Hex(),
 				TransferType: getTransferType(address, transferEvent.From.Hex()),
@@ -173,18 +182,12 @@ func Transfers(
 }
 
 func Watch(address string, chainName chains.ChainName, fromBlock uint64) error {
-	// Set up client
-	client, err := GetClient(chainName)
-	if err != nil {
-		return err
-	}
-
 	// Set up channel
 	transfers := make(chan reporter.Transfer)
 
 	// Fire off goroutine to chase transfers
 	// TODO: maxBlocks should be chain specific, an internal impl detail of ChaseTransfers
-	go ChaseTransfers(client, address, fromBlock, 100000, transfers)
+	go ChaseTransfers(chainName, address, fromBlock, 100000, transfers)
 
 	// Fire off goroutine to process transfers
 	go func() {
