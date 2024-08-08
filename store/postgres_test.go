@@ -9,6 +9,7 @@ import (
 // Requires a running postgres instance at localhost:5432
 func TestPostgresTransferStore(t *testing.T) {
 	store := NewPostgresTransferStore()
+	store.Bootstrap()
 
 	transfer := reporter.Transfer{
 		Txid:         "0xb831414248618c196919908bfdd05106ee7b6ab57ed8bac986374d8de7191902",
