@@ -81,6 +81,7 @@ func TrxTransfers(walletAddress string, chainName chains.ChainName) ([]reporter.
 			// Use append since we have no way of knowing the exact number of rows,
 			// since the API returns the wrong amount of rows
 			result = append(result, reporter.Transfer{
+				Chain:        chainName,
 				Txid:         transfer.TransactionHash,
 				From:         transfer.TransferFromAddress,
 				To:           transfer.TransferToAddress,
@@ -201,6 +202,7 @@ func Trc20Transfers(walletAddress string, chainName chains.ChainName) ([]reporte
 			// Use append since we have no way of knowing the exact number of rows,
 			// since the API returns the wrong amount of rows
 			result = append(result, reporter.Transfer{
+				Chain:        chainName,
 				Txid:         transfer.TransactionId,
 				From:         transfer.From,
 				To:           transfer.To,

@@ -1,6 +1,9 @@
 package reporter
 
+import "chaintx/chains"
+
 type Transfer struct {
+	Chain        chains.ChainName
 	Txid         string
 	Timestamp    string
 	TransferType string
@@ -11,5 +14,6 @@ type Transfer struct {
 }
 
 type WatchedAddressInfo struct {
+	Chain   chains.ChainName
 	Address string
 }
