@@ -16,6 +16,37 @@ func NewPostgresTransferStore() *PostgresTransferStore {
 	return &PostgresTransferStore{pg}
 }
 
+// Bootstrap creates the necessary tables if they don't exist
+// The executed statements must be idempotent
+func (s *PostgresTransferStore) Bootstrap() {
+	_, err := s.pg.Exec(`
+		CREATE TABLE IF NOT EXISTS transfers (
+			-- TODO: address
+			"txid" TEXT PRIMARY KEY,
+			"timestamp" TEXT NOT NULL,
+			"transferType" TEXT NOT NULL,
+			"from" TEXT NOT NULL,
+			"to" TEXT NOT NULL,
+			"amount" TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS accounts (
+			"chain" TEXT NOT NULL,
+			"address" TEXT PRIMARY KEY,
+			"state" TEXT NOT NULL,
+			"createdAt" DATE NOT NULL,
+			"lastUpdated" DATE NOT NULL
+		);
+	`)
+	if err != nil {
+		log.Fatal("Failed to bootstrap postgres db", err)
+	}
+
+	// region Migrations go here
+	// ...
+	// endregion
+}
+
 func (s *PostgresTransferStore) Add(address string, transfer reporter.Transfer) error {
 	_, err :=
 		s.pg.Exec(`INSERT INTO "transfers" ("txid", "timestamp", "transferType", "from", "to", "amount") VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -57,29 +88,4 @@ func getPgClient() *sql.DB {
 	}
 	pgClient = db
 	return db
-}
-
-func BootstrapTables(client *sql.DB) {
-	_, err := client.Exec(`
-		CREATE TABLE IF NOT EXISTS transfers (
-			-- TODO: address
-			"txid" TEXT PRIMARY KEY,
-			"timestamp" TEXT NOT NULL,
-			"transferType" TEXT NOT NULL,
-			"from" TEXT NOT NULL,
-			"to" TEXT NOT NULL,
-			"amount" TEXT NOT NULL,
-		);
-
-		CREATE TABLE IF NOT EXISTS accounts (
-			"chain" TEXT NOT NULL,
-			"address" TEXT PRIMARY KEY,
-			"state" TEXT NOT NULL,
-			"createdAt" DATE NOT NULL,
-			"lastUpdated" DATE NOT NULL
-		);
-	`)
-	if err != nil {
-		log.Fatal("Failed to bootstrap postgres db", err)
-	}
 }
