@@ -24,7 +24,7 @@ func TestTrxTransfers(t *testing.T) {
 			}
 
 			for _, transfer := range transfers {
-				transferStore.Add(address, transfer)
+				transferStore.Add(transfer)
 			}
 		}()
 	}
@@ -33,6 +33,7 @@ func TestTrxTransfers(t *testing.T) {
 	actual, present := transferStore.Get("04b33e531a668c5d71d165ae16a80ec172a86773c1c35f24956a4e08fbaef1d7")
 	expected := reporter.Transfer{
 		Chain:        "tronShasta",
+		Address:      "TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd",
 		Txid:         "04b33e531a668c5d71d165ae16a80ec172a86773c1c35f24956a4e08fbaef1d7",
 		Timestamp:    "1716960603000",
 		TransferType: "RECEIVE",
@@ -62,7 +63,7 @@ func TestTrc20Transfers(t *testing.T) {
 			}
 
 			for _, transfer := range transfers {
-				transferStore.Add(address, transfer)
+				transferStore.Add(transfer)
 			}
 		}()
 	}
@@ -71,6 +72,7 @@ func TestTrc20Transfers(t *testing.T) {
 	actual, present := transferStore.Get("ce9865534ea5c8f3dc382a19448a574d31a2b2596d2f45c796e46eddcbdcd5b6")
 	expected := reporter.Transfer{
 		Chain:        "tronShasta",
+		Address:      "TPGdxSz5sFwbmrDfn7G3fjyYCJCJXPu2rd",
 		Txid:         "ce9865534ea5c8f3dc382a19448a574d31a2b2596d2f45c796e46eddcbdcd5b6",
 		Timestamp:    "1719378372000",
 		TransferType: "RECEIVE",

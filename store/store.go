@@ -7,7 +7,7 @@ import (
 )
 
 type TransferStore interface {
-	Add(address string, transfer reporter.Transfer)
+	Add(transfer reporter.Transfer)
 	Get(txid string) (reporter.Transfer, bool)
 	ListByAddress(address string) []reporter.Transfer
 }
@@ -36,12 +36,12 @@ func NewTransferStore() *InMemoryTransferStore {
 	}
 }
 
-func (s *InMemoryTransferStore) Add(address string, transfer reporter.Transfer) {
+func (s *InMemoryTransferStore) Add(transfer reporter.Transfer) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.transfersByTxid[transfer.Txid] = transfer
-	s.transfersByAddress[address] = append(s.transfersByAddress[address], transfer)
+	s.transfersByAddress[transfer.Address] = append(s.transfersByAddress[transfer.Address], transfer)
 }
 
 func (s *InMemoryTransferStore) Get(txid string) (reporter.Transfer, bool) {

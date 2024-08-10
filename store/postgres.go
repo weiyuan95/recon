@@ -23,9 +23,11 @@ func (s *PostgresTransferStore) Bootstrap() {
 		CREATE TABLE IF NOT EXISTS transfers (
 			"id" SERIAL PRIMARY KEY, -- surrogate key
 			"chain" TEXT NOT NULL, -- denormalized
+			"address" TEXT NOT NULL, 
 			"txid" TEXT NOT NULL,
 			"timestamp" TEXT NOT NULL,
 			"transferType" TEXT NOT NULL,
+			"tokenType" TEXT NOT NULL,
 			"from" TEXT NOT NULL,
 			"to" TEXT NOT NULL,
 			"amount" TEXT NOT NULL
@@ -51,29 +53,58 @@ func (s *PostgresTransferStore) Bootstrap() {
 	// endregion
 }
 
-func (s *PostgresTransferStore) Add(address string, transfer reporter.Transfer) error {
+func (s *PostgresTransferStore) Add(transfer reporter.Transfer) error {
 	_, err :=
-		s.pg.Exec(`INSERT INTO "transfers" ("chain", "txid", "timestamp", "transferType", "from", "to", "amount") VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			transfer.Chain, transfer.Txid, transfer.Timestamp, transfer.TransferType, transfer.From, transfer.To, transfer.Amount)
+		s.pg.Exec(`INSERT INTO "transfers" ("chain", "address", "txid", "timestamp", "transferType", "tokenType", "from", "to", "amount") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			transfer.Chain, transfer.Address, transfer.Txid, transfer.Timestamp, transfer.TransferType, transfer.TokenType, transfer.From, transfer.To, transfer.Amount)
 	return err
 }
 
 func (s *PostgresTransferStore) Get(_txid string) *reporter.Transfer {
-	rows, err := s.pg.Query(`SELECT "txid", "timestamp", "transferType", "from", "to", "amount" FROM "transfers" WHERE "txid" = $1`, _txid)
+	rows, err := s.pg.Query(`SELECT "chain", "address", "txid", "timestamp", "transferType", "tokenType", "from", "to", "amount" FROM "transfers" WHERE "txid" = $1`, _txid)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err) // TODO: error logging
+		return nil
 	}
 
 	if !rows.Next() {
 		return nil
 	}
 
-	var transfer reporter.Transfer
-	if err := rows.Scan(&transfer.Txid, &transfer.Timestamp, &transfer.TransferType, &transfer.From, &transfer.To, &transfer.Amount); err != nil {
-		log.Fatal(err)
+	transfer, err := rowToTransfer(rows)
+	if err != nil {
+		log.Println(err)
 	}
-	log.Println("Found transfer", transfer)
-	return &transfer
+	return transfer
+}
+
+func (s *PostgresTransferStore) ListByAddress(address string) []reporter.Transfer {
+	rows, err := s.pg.Query(`SELECT "chain", "address", "txid", "timestamp", "transferType", "tokenType", "from", "to", "amount" FROM "transfers" WHERE "address" = $1`, address)
+	if err != nil {
+		log.Println("Error encountered executing query", err)
+		return nil
+	}
+
+	transfers := make([]reporter.Transfer, 0)
+
+	for rows.Next() {
+		transfer, err := rowToTransfer(rows)
+		if err != nil {
+			log.Println("Error encountered mapping row to Transfer struct", err)
+			continue
+		}
+		transfers = append(transfers, *transfer)
+	}
+
+	return transfers
+}
+
+func rowToTransfer(rows *sql.Rows) (*reporter.Transfer, error) {
+	var transfer reporter.Transfer
+	if err := rows.Scan(&transfer.Chain, &transfer.Address, &transfer.Txid, &transfer.Timestamp, &transfer.TransferType, &transfer.TokenType, &transfer.From, &transfer.To, &transfer.Amount); err != nil {
+		return nil, err
+	}
+	return &transfer, nil
 }
 
 var pgClient *sql.DB

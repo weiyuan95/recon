@@ -166,9 +166,11 @@ func transfers(
 
 			transfer := reporter.Transfer{
 				Chain:        chain,
+				Address:      address,
 				Txid:         vLog.TxHash.Hex(),
 				Timestamp:    vLog.BlockHash.Hex(),
 				TransferType: getTransferType(address, transferEvent.From.Hex()),
+				TokenType:    "ERC20", // TODO: pull token details
 				From:         transferEvent.From.Hex(),
 				To:           transferEvent.To.Hex(),
 				Amount:       transferEvent.Value.Text(10), // TODO: Format to canonical amount
@@ -192,7 +194,7 @@ func Watch(address string, chainName chains.ChainName, fromBlock uint64) error {
 	// Fire off goroutine to process transfers
 	go func() {
 		for transfer := range transfers {
-			store.LocalTransferStore.Add(address, transfer)
+			store.LocalTransferStore.Add(transfer)
 		}
 	}()
 

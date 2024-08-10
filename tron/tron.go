@@ -82,6 +82,7 @@ func TrxTransfers(walletAddress string, chainName chains.ChainName) ([]reporter.
 			// since the API returns the wrong amount of rows
 			result = append(result, reporter.Transfer{
 				Chain:        chainName,
+				Address:      walletAddress,
 				Txid:         transfer.TransactionHash,
 				From:         transfer.TransferFromAddress,
 				To:           transfer.TransferToAddress,
@@ -203,6 +204,7 @@ func Trc20Transfers(walletAddress string, chainName chains.ChainName) ([]reporte
 			// since the API returns the wrong amount of rows
 			result = append(result, reporter.Transfer{
 				Chain:        chainName,
+				Address:      walletAddress,
 				Txid:         transfer.TransactionId,
 				From:         transfer.From,
 				To:           transfer.To,
@@ -271,11 +273,11 @@ func Watch(chainName chains.ChainName) error {
 				}
 
 				for _, transfer := range trxTransfers {
-					store.LocalTransferStore.Add(info.Address, transfer)
+					store.LocalTransferStore.Add(transfer)
 				}
 
 				for _, transfer := range trc20Transfers {
-					store.LocalTransferStore.Add(info.Address, transfer)
+					store.LocalTransferStore.Add(transfer)
 				}
 			}
 		}
