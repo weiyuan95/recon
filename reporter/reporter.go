@@ -4,6 +4,7 @@ import "chaintx/chains"
 
 type Transfer struct {
 	Chain        chains.ChainName
+	Address      string
 	Txid         string
 	Timestamp    string
 	TransferType string

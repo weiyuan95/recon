@@ -1,6 +1,7 @@
 package evm
 
 import (
+	"chaintx/chains"
 	"chaintx/reporter"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
@@ -8,13 +9,10 @@ import (
 )
 
 func TestChaseEvmTransfers(t *testing.T) {
-	client, err := ethclient.Dial("https://eth-pokt.nodies.app")
-	assert.Nil(t, err)
-
 	transfers := make(chan reporter.Transfer)
 
 	go ChaseTransfers(
-		client,
+		chains.Ethereum,
 		"0x62a7b6eb6a5d2dcaa05bf53c7272afd9da460a2c",
 		20467174,
 		10,
@@ -26,14 +24,16 @@ func TestEvmTransfers(t *testing.T) {
 	client, err := ethclient.Dial("https://eth-pokt.nodies.app")
 	assert.Nil(t, err)
 
-	transfers := Transfers(
+	transfers := transfers(
 		client,
+		chains.Ethereum,
 		"0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
 		20359096,
 		20359098,
 	)
 
 	assert.Equal(t, reporter.Transfer{
+		Chain:        "ethereum",
 		From:         "0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
 		To:           "0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
 		Amount:       "1",
