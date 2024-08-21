@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/chaintx.iml" filepath="$PROJECT_DIR$/chaintx.iml" />
+      <module fileurl="file://$PROJECT_DIR$/recon.iml" filepath="$PROJECT_DIR$/recon.iml" />
     </modules>
   </component>
 </project>

@@ -1,10 +1,10 @@
 package evm
 
 import (
-	"chaintx/chains"
-	"chaintx/reporter"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
+	"recon/chains"
+	"recon/reporter"
 	"testing"
 )
 

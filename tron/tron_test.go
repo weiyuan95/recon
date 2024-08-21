@@ -1,9 +1,9 @@
 package tron
 
 import (
-	"chaintx/reporter"
-	"chaintx/store"
 	"github.com/stretchr/testify/assert"
+	"recon/reporter"
+	"recon/store"
 	"sync"
 	"testing"
 )

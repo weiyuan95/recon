@@ -1,6 +1,6 @@
 package reporter
 
-import "chaintx/chains"
+import "recon/chains"
 
 type Transfer struct {
 	Chain        chains.ChainName

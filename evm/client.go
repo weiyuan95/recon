@@ -1,10 +1,10 @@
 package evm
 
 import (
-	"chaintx/chains"
 	"errors"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
+	"recon/chains"
 )
 
 type evmChain struct {

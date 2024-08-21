@@ -1,4 +1,4 @@
-module chaintx
+module recon
 
 go 1.22.5
 

@@ -1,8 +1,8 @@
 package store
 
 import (
-	"chaintx/chains"
-	"chaintx/reporter"
+	"recon/chains"
+	"recon/reporter"
 	"sync"
 )
 
