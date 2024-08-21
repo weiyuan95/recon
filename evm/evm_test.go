@@ -33,6 +33,7 @@ func TestEvmTransfers(t *testing.T) {
 	)
 
 	assert.Equal(t, reporter.Transfer{
+		Address:      "0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
 		Chain:        "ethereum",
 		From:         "0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
 		To:           "0xA5bA9D68890D0BA1C7d5c6D1AE9B2836a5c4F4f1",
@@ -40,5 +41,6 @@ func TestEvmTransfers(t *testing.T) {
 		Txid:         "0xb831414248618c196919908bfdd05106ee7b6ab57ed8bac986374d8de7191902",
 		Timestamp:    "0x884dd19c0e966eaf5b3e37e4df55a1995a243aa352e70794f0a249e7828fc274",
 		TransferType: "SEND",
+		TokenType:    "ERC20",
 	}, transfers[0])
 }

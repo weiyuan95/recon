@@ -50,12 +50,15 @@ func TrxTransfers(walletAddress string, chainName chains.ChainName) ([]reporter.
 		walletAddress,
 	)
 
-	get, err := client.Get(url)
-	if err != nil {
+	get, getErr := client.Get(url)
+	if getErr != nil {
 		return []reporter.Transfer{}, errors.New("failed to fetch data")
 	}
 
-	body, err := io.ReadAll(get.Body)
+	body, readErr := io.ReadAll(get.Body)
+	if readErr != nil {
+		return []reporter.Transfer{}, errors.New("failed to read data")
+	}
 	defer get.Body.Close()
 
 	var data TrxTransferResult
@@ -102,12 +105,15 @@ func TrxTransfers(walletAddress string, chainName chains.ChainName) ([]reporter.
 			walletAddress,
 		)
 
-		get, err = client.Get(url)
-		if err != nil {
+		get, getErr = client.Get(url)
+		if getErr != nil {
 			return []reporter.Transfer{}, errors.New("failed to fetch data")
 		}
 
-		body, err = io.ReadAll(get.Body)
+		body, readErr := io.ReadAll(get.Body)
+		if readErr != nil {
+			return []reporter.Transfer{}, errors.New("failed to read data")
+		}
 		// Do not defer since we are in a loop - close it immediately after reading
 		// this is because the code that is deferred will only run _after_ the loop completes
 		get.Body.Close()
@@ -171,12 +177,15 @@ func Trc20Transfers(walletAddress string, chainName chains.ChainName) ([]reporte
 		walletAddress,
 	)
 
-	get, err := client.Get(url)
-	if err != nil {
+	get, getErr := client.Get(url)
+	if getErr != nil {
 		return []reporter.Transfer{}, errors.New("failed to fetch data")
 	}
 
-	body, err := io.ReadAll(get.Body)
+	body, readErr := io.ReadAll(get.Body)
+	if readErr != nil {
+		return []reporter.Transfer{}, errors.New("failed to read data")
+	}
 	defer get.Body.Close()
 
 	var result []reporter.Transfer
@@ -226,12 +235,15 @@ func Trc20Transfers(walletAddress string, chainName chains.ChainName) ([]reporte
 			walletAddress,
 		)
 
-		get, err = client.Get(url)
-		if err != nil {
+		get, getErr = client.Get(url)
+		if getErr != nil {
 			return []reporter.Transfer{}, errors.New("failed to fetch data")
 		}
 
-		body, err = io.ReadAll(get.Body)
+		body, readErr := io.ReadAll(get.Body)
+		if readErr != nil {
+			return []reporter.Transfer{}, errors.New("failed to read data")
+		}
 		// Do not defer since we are in a loop - close it immediately after reading
 		// this is because the code that is deferred will only run _after_ the loop completes
 		get.Body.Close()
