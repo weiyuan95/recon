@@ -211,7 +211,7 @@ func getErc20Abi() abi.ABI {
 }
 
 func getTransferType(address string, from string) string {
-	if strings.ToLower(address) == strings.ToLower(from) {
+	if strings.EqualFold(address, from) {
 		return "SEND"
 	}
 	return "RECEIVE"

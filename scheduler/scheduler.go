@@ -12,11 +12,8 @@ func Schedule(job Job, interval int) *time.Ticker {
 	ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 
 	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				job()
-			}
+		for range ticker.C {
+			job()
 		}
 	}()
 

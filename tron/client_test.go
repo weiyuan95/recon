@@ -20,13 +20,13 @@ func TestThrottleClient(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			// we don't care about the response or error
-			throttleClient.Get("https://www.google.com")
+			_, _ = throttleClient.Get("https://www.google.com")
 		}()
 	}
 
 	wg.Wait()
 
-	diff := time.Now().Sub(then)
+	diff := time.Since(then)
 	expectedDifference := int64(throttleTime * numRuns)
 
 	if diff.Milliseconds() < expectedDifference {
