@@ -114,7 +114,7 @@ func getPgClient() *sql.DB {
 		return pgClient
 	}
 
-	connStr := "user=postgres password=postgres dbname=chaintx sslmode=disable" // TODO: use env creds
+	connStr := "user=postgres password=postgres dbname=recon sslmode=disable" // TODO: use env creds
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		// We panic here since we definitely need the client to be connected on start,
